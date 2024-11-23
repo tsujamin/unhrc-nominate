@@ -13,9 +13,13 @@ class Vote(Enum):
     @staticmethod
     def from_record_value(val: str) -> 'Vote':
         match val.upper():
+            case 'NO': return Vote.NO
             case 'N': return Vote.NO
+            case 'YES': return Vote.YES
             case 'Y': return Vote.YES
+            case 'ABSTAIN': return Vote.ABSTAIN
             case 'A': return Vote.ABSTAIN
+            case 'NO_VOTE': return Vote.NO_VOTE
             case '.': return Vote.NO_VOTE
             case _: breakpoint()
 
