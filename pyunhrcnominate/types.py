@@ -35,3 +35,9 @@ class Resolution:
     date: date
     summary: str
     votes: OrderedDict[CountryShortName, Vote]
+
+@dataclass
+class Country:
+    short_name: CountryShortName
+    long_name: str
+    category: str
