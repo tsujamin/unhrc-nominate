@@ -2,10 +2,19 @@ import argparse
 import sqlite3
 import os
 import csv
+import jinja2
 from datetime import datetime
 from .types import *
 from typing import Generator
 from collections import OrderedDict
+from abc import ABC
+
+class Args(ABC):
+    db_filename: str
+    match: list[str]
+    abstain_is_no_vote: bool
+    missing_is_no_vote: bool
+
 
 def get_votes_by_resolution(conn: sqlite3.Connection, resolution_name: str) -> OrderedDict[CountryVote]:
     cursor = conn.cursor()
@@ -79,6 +88,15 @@ def write_country_data(filename, countries: list[Country]):
         for country in countries:
             csv_out.writerow([country.short_name, country.long_name, country.category])
 
+def write_r_script(filename: str):
+    with open(f'{os.path.dirname(__file__)}/dwnominate.r.tmpl') as tf:
+        tmpl = jinja2.Template(tf.read())
+
+    with open(filename, "w") as f:
+
+        f.write(tmpl.render(output_directory=os.path.abspath(os.path.dirname(filename))))
+
+
 
 def export(prefix: str, resolutions: list[Resolution], all_countries: list[Country]):
     resolution_country_names = countries_for_resolutions(resolutions)
@@ -91,18 +109,25 @@ def export(prefix: str, resolutions: list[Resolution], all_countries: list[Count
     write_vote_data(f'{prefix}-vote-data.csv', resolutions)
     write_country_data(f'{prefix}-legis-data.csv', resolution_countries)
 
-
-def main(output_dir: str, db_name: str, keywords: list[str] = []):
+def main(output_dir: str, args: Args):
     import sqlite3
-    conn = sqlite3.connect(db_name)
+    conn = sqlite3.connect(args.db_filename)
 
     filtered_resolutions: list[Resolution] = []
 
-    # Filter down based on keywords (if any)
     for res in resolutions(conn):
+        # Map abstain/missing to no if required
+        for country_vote in res.votes.values():
+            if args.abstain_is_no_vote and country_vote.vote == Vote.ABSTAIN:
+                country_vote.vote = Vote.NO
+
+            if args.missing_is_no_vote and country_vote.vote == Vote.NOT_IN_SESSION:
+                country_vote.vote = Vote.NO
+
+        # Filter down based on keywords (if any)
         lower_res = res.summary.lower()
-        matched = len(keywords) == 0
-        for kw in keywords:
+        matched = len(args.match) == 0
+        for kw in args.match:
             if kw.lower() in lower_res:
                 matched = True
                 break
@@ -128,9 +153,11 @@ def main(output_dir: str, db_name: str, keywords: list[str] = []):
     for batch, resolution_batch in batches.items():
         export(f'{output_dir}/{batch}', resolution_batch, all_countries)
 
+    write_r_script(f'{output_dir}/plot.R')
+
     conn.close()
 
-def make_output_dir(keywords: list[str] = []) -> str:
+def make_output_dir(args: Args) -> str:
     try:
         os.mkdir("output")
     except:
@@ -139,7 +166,14 @@ def make_output_dir(keywords: list[str] = []) -> str:
     datetime.now().strftime("%y%m%d-%H%M%S")
 
     folder_parts = [datetime.now().strftime("%y%m%d-%H%M%S")]
-    folder_parts += keywords
+    folder_parts += args.match
+
+    if args.abstain_is_no_vote:
+        folder_parts.append("abstainisno")
+
+    if args.missing_is_no_vote:
+        folder_parts.append("missingisno")
+
     out_folder = "output/" + "-".join(folder_parts)
 
     os.mkdir(out_folder)
@@ -150,14 +184,16 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="SQLite Database Manager")
     parser.add_argument("db_filename", nargs="?", default='votes.sqlite3', help="Name of the SQLite database file to connect to.")
     parser.add_argument("--match", nargs="+", default=[], help="Simmary keywords to filter resolutions on")
+    parser.add_argument('--abstain-is-no-vote', action="store_true", default=False)
+    parser.add_argument('--missing-is-no-vote', action="store_true", default=False)
 
     args = parser.parse_args()
 
     if not os.path.exists(args.db_filename):
         raise FileNotFoundError(f"Database file {args.db_filename} not found.")
 
-    out_dir = make_output_dir(args.match)
+    out_dir = make_output_dir(args)
 
     print(f"created output directory {out_dir}")
 
-    main(out_dir, args.db_filename, args.match)
+    main(out_dir, args)
