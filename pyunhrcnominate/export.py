@@ -15,7 +15,6 @@ class Args(ABC):
     abstain_is_no_vote: bool
     missing_is_no_vote: bool
 
-
 def get_votes_by_resolution(conn: sqlite3.Connection, resolution_name: str) -> OrderedDict[CountryVote]:
     cursor = conn.cursor()
     query = "SELECT country_short, vote FROM votes WHERE resolution_name = ?"
@@ -30,7 +29,7 @@ def resolutions(conn: sqlite3.Connection) -> Generator[Resolution]:
     cursor.execute(query)
 
     for (name, vote_date, summary) in cursor.fetchall():
-        yield Resolution(name, datetime.strptime(vote_date, "%Y/%m/%d"), summary, get_votes_by_resolution(conn, name))
+        yield Resolution(name, datetime.strptime(vote_date, "%Y/%m/%d").date(), summary, get_votes_by_resolution(conn, name))
 
 def get_countries(conn: sqlite3.Connection) -> Generator[Country]:
     cursor = conn.cursor()
@@ -140,12 +139,12 @@ def main(output_dir: str, args: Args):
     
     # Batch resolutions by year
     for res in filtered_resolutions:
-        year = str(res.date.year)
+        session = res.session().label()
 
-        if year in batches:
-            batches[year].append(res)
+        if session in batches:
+            batches[session].append(res)
         else:
-            batches[year] = [res]
+            batches[session] = [res]
 
     # Read in the country table
     all_countries = list(get_countries(conn))

@@ -38,15 +38,22 @@ load_rollcall <- function(prefix)
 
 unhrc_years = list()
 for (year in seq(unhrc_year_first, unhrc_year_last, by = 1)) {
-    print(paste0("loading year", year))
-    rc <- load_rollcall(year)
-
-    if( ncol(rc$votes) < n_min_votes ) {
-        print(paste0(year, " didn't meet min votes, votes=", ncol(rc$votes)))
-        next
+    if (year == 2012) {
+        next; # Skip because 2011 was 18 months
     }
-    
-    unhrc_years <- append(unhrc_years, list(rc))
+    try(
+        {
+            print(paste0("loading year", year))
+            rc <- load_rollcall(year)
+
+            if( ncol(rc$votes) < n_min_votes ) {
+                print(paste0(year, " didn't meet min votes, votes=", ncol(rc$votes)))
+                next
+            }
+
+            unhrc_years <- append(unhrc_years, list(rc))
+        }
+    )
 }
 
 polarity <- c("CHN")
