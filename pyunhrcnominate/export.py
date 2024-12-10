@@ -99,7 +99,7 @@ def write_r_script(filename: str):
 
     with open(filename, "w") as f:
 
-        f.write(tmpl.render(output_directory=os.path.abspath(os.path.dirname(filename).replace("\\", "\\\\"))))
+        f.write(tmpl.render(output_directory=os.path.abspath(os.path.dirname(filename)).replace("\\", "\\\\")))
 
 
 

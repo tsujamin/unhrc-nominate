@@ -9,7 +9,7 @@ input_folder <- "{{ output_directory }}/"
 unhrc_year_first <- 2006
 unhrc_year_last  <- 2024
 
-n_min_votes = 15 # EDIT THIS
+n_min_votes = 10 # EDIT THIS
 
 load_rollcall <- function(prefix)
 {
@@ -55,11 +55,11 @@ for (year in seq(unhrc_year_first, unhrc_year_last, by = 1)) {
     )
 }
 
-polarity <- c("CHN")
+polarity <- c("CHN") # Change this to country code of polar extreme
 unhrc_all_years = load_rollcall('all')
 
 nominate <- dwnominate::dwnominate(unhrc_years, dims=1, model=1, minvotes=n_min_votes, polarity=polarity)
 plot(nominate)
 
 all_wnom <- wnominate(unhrc_all_years, dims=1, minvotes=n_min_votes, polarity=polarity)
-plot(all_wnom)
+plot.coords(all_wnom)
