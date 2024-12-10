@@ -39,6 +39,7 @@ class Resolution:
     date: date
     summary: str
     votes: OrderedDict[CountryShortName, Vote]
+    agenda: str
 
     def session(self) -> 'Session':
         for session in Session._generate():

@@ -11,7 +11,8 @@ from abc import ABC
 
 class Args(ABC):
     db_filename: str
-    match: list[str]
+    title_match: list[str]
+    agenda_match: list[str]
     abstain_is_no_vote: bool
     missing_is_no_vote: bool
 
@@ -25,11 +26,11 @@ def get_votes_by_resolution(conn: sqlite3.Connection, resolution_name: str) -> O
 
 def resolutions(conn: sqlite3.Connection) -> Generator[Resolution]:
     cursor = conn.cursor()
-    query = "SELECT name, vote_date, summary FROM resolutions order by vote_date asc"
+    query = "SELECT name, vote_date, summary, agenda FROM resolutions order by vote_date asc"
     cursor.execute(query)
 
-    for (name, vote_date, summary) in cursor.fetchall():
-        yield Resolution(name, datetime.strptime(vote_date, "%Y/%m/%d").date(), summary, get_votes_by_resolution(conn, name))
+    for (name, vote_date, summary, agenda) in cursor.fetchall():
+        yield Resolution(name, datetime.strptime(vote_date, "%Y/%m/%d").date(), summary, get_votes_by_resolution(conn, name), agenda)
 
 def get_countries(conn: sqlite3.Connection) -> Generator[Country]:
     cursor = conn.cursor()
@@ -125,8 +126,13 @@ def main(output_dir: str, args: Args):
 
         # Filter down based on keywords (if any)
         lower_res = res.summary.lower()
-        matched = len(args.match) == 0
-        for kw in args.match:
+        matched = (len(args.title_match) + len(args.agenda_match)) == 0
+        for kw in args.title_match:
+            if kw.lower() in lower_res:
+                matched = True
+                break
+
+        for kw in args.agenda_match:
             if kw.lower() in lower_res:
                 matched = True
                 break
@@ -165,7 +171,8 @@ def make_output_dir(args: Args) -> str:
     datetime.now().strftime("%y%m%d-%H%M%S")
 
     folder_parts = [datetime.now().strftime("%y%m%d-%H%M%S")]
-    folder_parts += args.match
+    folder_parts += args.title_match
+    folder_parts += args.agenda_match
 
     if args.abstain_is_no_vote:
         folder_parts.append("abstainisno")
@@ -182,7 +189,8 @@ def make_output_dir(args: Args) -> str:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="SQLite Database Manager")
     parser.add_argument("db_filename", nargs="?", default='votes.sqlite3', help="Name of the SQLite database file to connect to.")
-    parser.add_argument("--match", nargs="+", default=[], help="Simmary keywords to filter resolutions on")
+    parser.add_argument("--title-match", nargs="+", default=[], help="Simmary keywords to filter resolution titles on")
+    parser.add_argument("--agenda-match", nargs="+", default=[], help="Simmary keywords to filter resolution agendas on")
     parser.add_argument('--abstain-is-no-vote', action="store_true", default=False)
     parser.add_argument('--missing-is-no-vote', action="store_true", default=False)
 

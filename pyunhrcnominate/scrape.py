@@ -27,6 +27,7 @@ def init_schema(conn: sqlite3.Connection):
             name TEXT,
             vote_date TEXT,
             summary TEXT,
+            agenda TEXT,
             PRIMARY KEY (name)    
         )
     """)
@@ -39,6 +40,7 @@ def record_to_resolution(elem: etree.Element) -> Resolution:
     res_name = elem.xpath("marc:datafield[@tag='791']/marc:subfield[@code='a']/text()", namespaces=NAMESPACES)[0]
     res_date = date.fromisoformat(elem.xpath("marc:datafield[@tag='269']/marc:subfield[@code='a']/text()", namespaces=NAMESPACES)[0])
     summary  = "".join(elem.xpath("marc:datafield[@tag='245']/marc:subfield/text()", namespaces=NAMESPACES))
+    agenda  = "".join(elem.xpath("marc:datafield[@tag='991']/marc:subfield/text()", namespaces=NAMESPACES))
 
     for vote_elem in elem.xpath("marc:datafield[@tag='967']", namespaces=NAMESPACES):
         country_short = vote_elem.xpath("marc:subfield[@code='b']/text()", namespaces=NAMESPACES)[0]
@@ -56,7 +58,7 @@ def record_to_resolution(elem: etree.Element) -> Resolution:
 
         votes[country_short] = CountryVote(country_short, vote)
 
-    return Resolution(res_name, res_date, summary, votes)
+    return Resolution(res_name, res_date, summary, votes, agenda)
 
 def get_records_page(offset: int, chunk_size: int = 100) -> list[etree.Element]:
     response = requests.get(SEARCH_URL.format(chunk_size=chunk_size, offset=offset))
@@ -82,8 +84,8 @@ def save_resolutions(conn: sqlite3.Connection):
         cursor = conn.cursor()
 
         try:
-            query = "INSERT INTO resolutions (name, vote_date, summary) VALUES (?, ?, ?)"
-            cursor.execute(query, (resolution.name, resolution.date.strftime("%Y/%m/%d"), resolution.summary))
+            query = "INSERT INTO resolutions (name, vote_date, summary, agenda) VALUES (?, ?, ?, ?)"
+            cursor.execute(query, (resolution.name, resolution.date.strftime("%Y/%m/%d"), resolution.summary, resolution.agenda))
         except sqlite3.IntegrityError:
             print(f"Resolution {resolution.name} already in the resolutions table, is it a duplicate? Rolling back")
             conn.rollback()
