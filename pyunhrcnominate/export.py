@@ -15,6 +15,11 @@ class Args(ABC):
     agenda_match: list[str]
     abstain_is_no_vote: bool
     missing_is_no_vote: bool
+    only_passed: bool
+    only_failed: bool
+    only_amendments: bool
+    only_resolutions: bool
+
 
 def get_votes_by_resolution(conn: sqlite3.Connection, resolution_name: str) -> OrderedDict[CountryVote]:
     cursor = conn.cursor()
@@ -140,6 +145,18 @@ def main(output_dir: str, args: Args):
         if matched:
             filtered_resolutions.append(res)
 
+    if args.only_passed:
+        filtered_resolutions = [r for r in filtered_resolutions if r.passed()]
+    
+    if args.only_failed:
+        filtered_resolutions = [r for r in filtered_resolutions if not r.passed()]
+
+    if args.only_amendments:
+        filtered_resolutions = [r for r in filtered_resolutions if r.resolution_type() == ResolutionType.AMENDMENT]
+
+    if args.only_resolutions:
+        filtered_resolutions = [r for r in filtered_resolutions if r.resolution_type() == ResolutionType.RESOLUTION]
+
     batches: dict[str, list[Resolution]] = {}
     batches['all'] = filtered_resolutions
     
@@ -180,6 +197,18 @@ def make_output_dir(args: Args) -> str:
     if args.missing_is_no_vote:
         folder_parts.append("missingisno")
 
+    if args.only_passed:
+        folder_parts.append("onlypassed")
+
+    if args.only_failed:
+        folder_parts.append("onlyfailed")
+
+    if args.only_amendments:
+        folder_parts.append("onlyamendments")
+
+    if args.only_resolutions:
+        folder_parts.append("onlyresolutions")
+
     out_folder = "output/" + "-".join(folder_parts)
 
     os.mkdir(out_folder)
@@ -193,6 +222,10 @@ if __name__ == "__main__":
     parser.add_argument("--agenda-match", nargs="+", default=[], help="Simmary keywords to filter resolution agendas on")
     parser.add_argument('--abstain-is-no-vote', action="store_true", default=False)
     parser.add_argument('--missing-is-no-vote', action="store_true", default=False)
+    parser.add_argument('--only-passed', action="store_true", default=False)
+    parser.add_argument('--only-failed', action="store_true", default=False)
+    parser.add_argument('--only-amendments', action="store_true", default=False)
+    parser.add_argument('--only-resolutions', action="store_true", default=False)
 
     args = parser.parse_args()
 

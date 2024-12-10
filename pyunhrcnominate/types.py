@@ -23,7 +23,23 @@ class Vote(Enum):
             case '.': return Vote.NO_VOTE
             case _: breakpoint()
 
+class ResolutionType(Enum):
+    DECISION = 'decision'
+    RESOLUTION = 'resolution'
+    AMENDMENT  = 'amendment'
 
+    @staticmethod
+    def from_resolution_id(id: str) -> 'ResolutionType':
+         # Ends with L.NNN, limited distribution document voted on, likely amendment to existing resolution
+        if id.split('/')[-1].lower().startswith("l."):
+            return ResolutionType.AMENDMENT
+        elif '/hrc/res' in id.lower():
+            return ResolutionType.RESOLUTION
+        elif '/hrc/dec' in id.lower():
+            return ResolutionType.DECISION
+        else:
+            raise Exception(f"unknown resolution type for id {id}")
+        
 CountryShortName = str
 
 @dataclass
@@ -47,6 +63,14 @@ class Resolution:
                 return session
             
         raise Exception(f'missing session for resolution {self.name} ({self.date})')
+
+    def passed(self) -> bool:
+        votes = [cv.vote for cv in self.votes.values()]
+
+        return len([v for v in votes if v == Vote.YES]) > len([v for v in votes if v == Vote.NO])
+            
+    def resolution_type(self) -> ResolutionType:
+        return ResolutionType.from_resolution_id(self.name)
 
 @dataclass
 class Country:

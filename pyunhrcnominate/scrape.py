@@ -28,6 +28,8 @@ def init_schema(conn: sqlite3.Connection):
             vote_date TEXT,
             summary TEXT,
             agenda TEXT,
+            passed BOOLEAN,
+            type TEXT,
             PRIMARY KEY (name)    
         )
     """)
@@ -84,8 +86,8 @@ def save_resolutions(conn: sqlite3.Connection):
         cursor = conn.cursor()
 
         try:
-            query = "INSERT INTO resolutions (name, vote_date, summary, agenda) VALUES (?, ?, ?, ?)"
-            cursor.execute(query, (resolution.name, resolution.date.strftime("%Y/%m/%d"), resolution.summary, resolution.agenda))
+            query = "INSERT INTO resolutions (name, vote_date, summary, agenda, passed, type) VALUES (?, ?, ?, ?, ?, ?)"
+            cursor.execute(query, (resolution.name, resolution.date.strftime("%Y/%m/%d"), resolution.summary, resolution.agenda, resolution.passed(), resolution.resolution_type().value))
         except sqlite3.IntegrityError:
             print(f"Resolution {resolution.name} already in the resolutions table, is it a duplicate? Rolling back")
             conn.rollback()
