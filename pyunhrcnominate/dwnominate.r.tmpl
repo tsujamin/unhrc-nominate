@@ -24,9 +24,8 @@ load_rollcall <- function(prefix)
     rc <- pscl::rollcall(
         data,
         yea=1,
-        # nay=0,
-        nay=c(0,2,3),
-        # missing=c(2,3), 
+        nay=0,
+        missing=c(2,3), 
         notInLegis=4,
         vote.names=vote_names,
         vote.data=vote_df,
