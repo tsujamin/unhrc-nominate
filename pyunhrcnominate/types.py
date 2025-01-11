@@ -98,3 +98,15 @@ class Session:
 
     def label(self) -> str:
         return str(self.start_date.year)
+    
+    def within(self, start_year: int|None, end_year: int|None) -> bool:
+        if start_year != None and self.start_date.year < start_year:
+            return False
+        
+        try:
+            if end_year != None and self.start_date.year > end_year:
+                return False
+        except:
+            breakpoint()
+        
+        return True

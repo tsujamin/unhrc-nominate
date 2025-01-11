@@ -58,8 +58,24 @@ for (year in seq(unhrc_year_first, unhrc_year_last, by = 1)) {
 polarity <- c("CHN") # Change this to country code of polar extreme
 unhrc_all_years = load_rollcall('all')
 
+
 nominate <- dwnominate::dwnominate(unhrc_years, dims=1, model=1, minvotes=n_min_votes, polarity=polarity)
+png(filename="{{output_directory}}/dwnominate.png")
 plot(nominate)
+dev.off()
 
 all_wnom <- wnominate(unhrc_all_years, dims=1, minvotes=n_min_votes, polarity=polarity)
+png(filename="{{output_directory}}/wnominate.png")
 plot.coords(all_wnom)
+dev.off()
+
+chn_usa_wnom <- wnominate(unhrc_all_years, dims=2, minvotes=n_min_votes, polarity=c("CHN", "USA"))
+png(filename="{{output_directory}}/wnominate-CHN-USA.png")
+plot.coords(chn_usa_wnom, d1.title="CHN Dimension Nominate", d2.title="USA Dimension Nominate" )
+dev.off()
+
+d<-round(all_wnom$legislators[,c("coord1D","se1D")],3)
+d_ordered <- d[order(d$coord1D),]
+write.csv(d_ordered, "{{output_directory}}/dimension.csv")
+
+write.csv(nominate$legislators[,c("session", "name", "coord1D")], "{{output_directory}}/dimension-over-time.csv")

@@ -19,6 +19,8 @@ class Args(ABC):
     only_failed: bool
     only_amendments: bool
     only_resolutions: bool
+    session_year_min: int
+    session_year_max: int
 
 
 def get_votes_by_resolution(conn: sqlite3.Connection, resolution_name: str) -> OrderedDict[CountryVote]:
@@ -157,6 +159,9 @@ def main(output_dir: str, args: Args):
     if args.only_resolutions:
         filtered_resolutions = [r for r in filtered_resolutions if r.resolution_type() == ResolutionType.RESOLUTION]
 
+    # Filter based on session start and stop date
+    filtered_resolutions = [r for r in filtered_resolutions if r.session().within(args.session_year_min, args.session_year_max)]
+
     batches: dict[str, list[Resolution]] = {}
     batches['all'] = filtered_resolutions
     
@@ -209,6 +214,12 @@ def make_output_dir(args: Args) -> str:
     if args.only_resolutions:
         folder_parts.append("onlyresolutions")
 
+    if args.session_year_min != None:
+        folder_parts.append(f'from{args.session_year_min}')
+
+    if args.session_year_max != None:
+        folder_parts.append(f'to{args.session_year_max}')
+
     out_folder = "output/" + "-".join(folder_parts)
 
     os.mkdir(out_folder)
@@ -226,6 +237,8 @@ if __name__ == "__main__":
     parser.add_argument('--only-failed', action="store_true", default=False)
     parser.add_argument('--only-amendments', action="store_true", default=False)
     parser.add_argument('--only-resolutions', action="store_true", default=False)
+    parser.add_argument('--session-year-min', type=int, default=None)
+    parser.add_argument('--session-year-max', type=int, default=None)
 
     args = parser.parse_args()
 
